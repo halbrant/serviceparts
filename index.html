@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-900">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HalBrant Service Parts</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Client-side PDF Generator (100% Free, Runs locally in browser) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        hbBlack: '#111827',
+                        hbDark: '#1f2937',
+                        hbCharcoal: '#374151',
+                        hbOrange: '#f97316',
+                        hbOrangeHover: '#ea580c',
+                        hbOrangeLight: '#ffedd5',
+                        hbGreen: '#22c55e',
+                        hbRed: '#ef4444'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827;
+            color: #f9fafb;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #f97316;
+        }
+
+        /* Print Override styles */
+        @media print {
+            .no-print { display: none !important; }
+            body { background-color: #ffffff !important; color: #000000 !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-hbOrange selection:text-white">
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="bg-hbDark border-b border-hbCharcoal/50 sticky top-0 z-40 shadow-xl no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-gradient-to-br from-hbOrange to-hbOrangeHover p-2.5 rounded-xl shadow-lg shadow-hbOrange/20 text-white">
+                    <i class="fa-solid fa-gears text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                        HalBrant <span class="text-hbOrange">Service Parts</span>
+                    </h1>
+                    <p class="text-xs text-gray-400 font-medium hidden sm:block">No-Limit Order Portal & Offline Logistics</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <!-- Offline/Online Status Badge -->
+                <span id="network-status" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span class="w-1.5 h-1.5 mr-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Online
+                </span>
+
+                <!-- Saved Orders Drawer Button -->
+                <button onclick="toggleSavedDrawer()" class="px-3 py-2 text-sm bg-hbCharcoal hover:bg-gray-600 text-white font-medium rounded-lg transition-all flex items-center space-x-2 border border-gray-600/50">
+                    <i class="fa-solid fa-folder-open text-hbOrange"></i>
+                    <span class="hidden sm:inline">Saved Orders</span>
+                    <span id="saved-count-badge" class="bg-hbOrange text-white text-xs px-1.5 py-0.5 rounded-full font-bold ml-1">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN FORM CONTAINER -->
+    <main class="max-w-5xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-10 flex-grow">
+        <form id="parts-order-form" onsubmit="event.preventDefault();" class="space-y-6 sm:space-y-8">
+            
+            <!-- SECTION 0: ELEVATOR OPERATIONAL STATUS -->
+            <div class="bg-hbDark rounded-2xl p-5 sm:p-7 border border-hbCharcoal/60 shadow-xl space-y-4">
+                <div class="flex items-center justify-between border-b border-hbCharcoal pb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-hbOrange/10 text-hbOrange p-2 rounded-lg">
+                            <i class="fa-solid fa-elevator text-lg"></i>
+                        </div>
+                        <h2 class="text-lg font-bold text-white tracking-wide">Elevator Operational Status</h2>
+                    </div>
+                    <span id="status-indicator-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> RUNNING
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <button type="button" id="status-btn-running" onclick="setElevatorStatus('RUNNING')" class="py-3 px-4 rounded-xl border-2 border-emerald-500 bg-emerald-500/10 text-emerald-400 font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all shadow-lg">
+                        <i class="fa-solid fa-circle-check text-lg"></i> RUNNING
+                    </button>
+                    <button type="button" id="status-btn-down" onclick="setElevatorStatus('DOWN')" class="py-3 px-4 rounded-xl border-2 border-hbCharcoal bg-hbBlack text-gray-400 font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all">
+                        <i class="fa-solid fa-circle-xmark text-lg"></i> DOWN / OUT OF SERVICE
+                    </button>
+                </div>
+            </div>
+
+            <!-- SECTION 1: JOB & CUSTOMER INFO -->
+            <div class="bg-hbDark rounded-2xl p-5 sm:p-7 border border-hbCharcoal/60 shadow-xl space-y-6">
+                <div class="flex items-center justify-between border-b border-hbCharcoal pb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-hbOrange/10 text-hbOrange p-2 rounded-lg">
+                            <i class="fa-solid fa-id-card text-lg"></i>
+                        </div>
+                        <h2 class="text-lg font-bold text-white tracking-wide">1. Job & Site Details</h2>
+                    </div>
+                    <span class="text-xs text-gray-400 font-mono" id="form-id-display">ID: #ORD-NEW</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">Customer / Site Name *</label>
+                        <input type="text" id="site-name" required placeholder="e.g. Acme Elevator Building" class="w-full bg-hbBlack border border-hbCharcoal rounded-lg px-3.5 py-2.5 text-white text-sm focus:outline-none focus:border-hbOrange focus:ring-1 focus:ring-hbOrange transition-all">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">Work Order / Ticket # *</label>
+                        <input type="text" id="work-order" required placeholder="e.g. WO-98214" class="w-full bg-hbBlack border border-hbCharcoal rounded-lg px-3.5 py-2.5 text-white text-sm focus:outline-none focus:border-hbOrange focus:ring-1 focus:ring-hbOrange transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">Date Requested *</label>
+                        <input type="date" id="order-date" required class="w-full bg-hbBlack border border-hbCharcoal rounded-lg px-3.5 py-2.5 text-white text-sm focus:outline-none focus:border-hbOrange focus:ring-1 focus:ring-hbOrange transition-all">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">Site Address</label>
+                        <input type="text" id="site-address" placeholder="1234 Maintenance Way, Building B" class="w-full bg-hbBlack border border-hbCharcoal rounded-lg px-3.5 py-2.5 text-white text-sm focus:outline-none focus:border-hbOrange focus:ring-1 focus:ring-hbOrange transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">Technician Name *</label>
+                        <input type="text" id="tech-name" required placeholder="John Tech" class="w-full bg-hbBlack border border-hbCharcoal rounded-lg px-3.5 py-2.5 text-white text-sm focus:outline-none focus:border-hbOrange focus:ring-1 focus:ring-hbOrange transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">Contact Phone</label>
+                        <input type="tel" id="contact-phone" placeholder="(555) 000-0000" class="w-full bg-hbBlack border border-hbCharcoal rounded-lg px-3.5 py-2.5 text-white text-sm focus:outline-none focus:border-hbOrange focus:ring-1 focus:ring-hbOrange transition-all">
+                    </div>
+
+                    <!-- Priority Selection -->
+                    <div class="md:col-span-2">
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">Order Priority</label>
+                        <div class="grid grid-cols-3 gap-3">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="priority" value="Normal" checked class="peer sr-only">
+                                <div class="text-center py-2 px-3 rounded-lg border border-hbCharcoal bg-hbBlack text-gray-300 text-xs font-semibold peer-checked:bg-slate-700 peer-checked:text-white peer-checked:border-slate-500 transition-all flex items-center justify-center gap-1.5">
+                                    <i class="fa-solid fa-circle-check text-slate-400"></i> Normal
+                                </div>
+                            </label>
+
+                            <label class="cursor-pointer">
+                                <input type="radio" name="priority" value="High" class="peer sr-only">
+                                <div class="text-center py-2 px-3 rounded-lg border border-hbCharcoal bg-hbBlack text-gray-300 text-xs font-semibold peer-checked:bg-amber-600/30 peer-checked:text-amber-400 peer-checked:border-amber-500 transition-all flex items-center justify-center gap-1.5">
+                                    <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> High
+                                </div>
+                            </label>
+
+                            <label class="cursor-pointer">
+                                <input type="radio" name="priority" value="Urgent" class="peer sr-only">
+                                <div class="text-center py-2 px-3 rounded-lg border border-hbCharcoal bg-hbBlack text-gray-300 text-xs font-semibold peer-checked:bg-hbOrange/20 peer-checked:text-hbOrange peer-checked:border-hbOrange transition-all flex items-center justify-center gap-1.5">
+                                    <i class="fa-solid fa-bolt text-hbOrange"></i> Urgent
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: PARTS REQUIRED LIST -->
+            <div class="bg-hbDark rounded-2xl p-5 sm:p-7 border border-hbCharcoal/60 shadow-xl space-y-6">
+                <div class="flex items-center justify-between border-b border-hbCharcoal pb-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-hbOrange/10 text-hbOrange p-2 rounded-lg">
+                            <i class="fa-solid fa-boxes-packing text-lg"></i>
+                        </div>
+                        <h2 class="text-lg font-bold text-white tracking-wide">2. Parts Required List</h2>
+                    </div>
+                    <button type="button" onclick="addPartRow()" class="px-3 py-1.5 bg-hbOrange hover:bg-hbOrangeHover text-white text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 shadow-md shadow-hbOrange/20">
+                        <i class="fa-solid fa-plus"></i> Add Part
+                    </button>
+                </div>
+
+                <div id="parts-container" class="space-y-4">
+                    <!-- Dynamic Part Cards Inserted Here -->
+                </div>
+            </div>
+
+            <!-- SECTION 3: QUOTE & FULFILLMENT STATUS -->
+            <div class="bg-hbDark rounded-2xl p-5 sm:p-7 border border-hbCharcoal/60 shadow-xl space-y-6">
+                <div class="flex items-center space-x-3 border-b border-hbCharcoal pb-4">
+                    <div class="bg-hbOrange/10 text-hbOrange p-2 rounded-lg">
+                        <i class="fa-solid fa-file-invoice-dollar text-lg"></i>
+                    </div>
+                    <h2 class="text-lg font-bold text-white tracking-wide">3. Quote & Fulfillment Status</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">Quote Sent Date</label>
+                        <input type="date" id="quote-date" class="w-full bg-hbBlack border border-hbCharcoal rounded-lg px-3.5 py-2.5 text-white text-sm focus:outline-none focus:border-hbOrange transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">Estimated Cost ($)</label>
+                        <input type="number" step="0.01" id="quote-amount" placeholder="0.00" class="w-full bg-hbBlack border border-hbCharcoal rounded-lg px-3.5 py-2.5 text-white text-sm focus:outline-none focus:border-hbOrange transition-all">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">Quote Approval Status</label>
+                        <select id="quote-status" class="w-full bg-hbBlack border border-hbCharcoal rounded-lg px-3.5 py-2.5 text-white text-sm focus:outline-none focus:border-hbOrange transition-all">
+                            <option value="Pending">Pending Approval</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1">Fulfillment Status</label>
+                        <select id="order-status" class="w-full bg-hbBlack border border-hbCharcoal rounded-lg px-3.5 py-2.5 text-white text-sm focus:outline-none focus:border-hbOrange transition-all">
+                            <option value="Draft">Draft</option>
+                            <option value="Ordered">Parts Ordered</option>
+                            <option value="Backordered">Backordered</option>
+                            <option value="Shipped">Shipped</option>
+                            <option value="Completed">Delivered / Completed</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 4: PHOTOS & SIGNATURES -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Photo Uploads -->
+                <div class="bg-hbDark rounded-2xl p-5 sm:p-7 border border-hbCharcoal/60 shadow-xl space-y-4">
+                    <div class="flex items-center justify-between border-b border-hbCharcoal pb-3">
+                        <div class="flex items-center space-x-3">
+                            <div class="bg-hbOrange/10 text-hbOrange p-2 rounded-lg">
+                                <i class="fa-solid fa-camera text-lg"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-white tracking-wide">Photos & Specs</h2>
+                        </div>
+                        <span id="photo-count" class="text-xs text-gray-400">0 attached</span>
+                    </div>
+
+                    <div id="drop-zone" onclick="document.getElementById('photo-input').click()" class="border-2 border-dashed border-hbCharcoal hover:border-hbOrange/60 rounded-xl p-6 text-center bg-hbBlack/50 cursor-pointer transition-all">
+                        <i class="fa-solid fa-cloud-arrow-up text-2xl text-hbOrange mb-2"></i>
+                        <p class="text-xs font-medium text-gray-300">Click or tap to attach part label images</p>
+                        <p class="text-[10px] text-gray-500 mt-1">PNG, JPG or WEBP (Max 4 photos)</p>
+                        <input type="file" id="photo-input" multiple accept="image/*" class="hidden" onchange="handlePhotoSelect(event)">
+                    </div>
+
+                    <div id="photo-preview-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                        <!-- Image Previews dynamically rendered -->
+                    </div>
+                </div>
+
+                <!-- Signatures -->
+                <div class="bg-hbDark rounded-2xl p-5 sm:p-7 border border-hbCharcoal/60 shadow-xl space-y-4">
+                    <div class="flex items-center border-b border-hbCharcoal pb-3">
+                        <div class="bg-hbOrange/10 text-hbOrange p-2 rounded-lg mr-3">
+                            <i class="fa-solid fa-signature text-lg"></i>
+                        </div>
+                        <h2 class="text-lg font-bold text-white tracking-wide">Signatures</h2>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Tech Signature -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-semibold text-gray-300">Technician Signature</span>
+                                <button type="button" onclick="clearSignature('tech')" class="text-[10px] text-hbOrange hover:underline">Clear</button>
+                            </div>
+                            <canvas id="tech-sig-canvas" class="w-full h-28 bg-hbBlack rounded-lg border border-hbCharcoal touch-none"></canvas>
+                        </div>
+
+                        <!-- Customer Signature -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-xs font-semibold text-gray-300">Customer Sign-off</span>
+                                <button type="button" onclick="clearSignature('customer')" class="text-[10px] text-hbOrange hover:underline">Clear</button>
+                            </div>
+                            <canvas id="customer-sig-canvas" class="w-full h-28 bg-hbBlack rounded-lg border border-hbCharcoal touch-none"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACTION BUTTONS BAR -->
+            <div class="bg-hbDark rounded-2xl p-4 sm:p-6 border border-hbCharcoal/60 shadow-2xl flex flex-wrap items-center justify-between gap-3 no-print">
+                <button type="button" onclick="resetForm()" class="px-4 py-2.5 rounded-xl border border-gray-700 hover:bg-hbCharcoal text-gray-300 text-xs sm:text-sm font-semibold transition-all">
+                    <i class="fa-solid fa-rotate-left mr-1.5"></i> Clear / New
+                </button>
+
+                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <button type="button" onclick="saveOrderToLocal()" class="flex-1 sm:flex-initial px-4 py-2.5 bg-hbCharcoal hover:bg-gray-600 text-white font-bold rounded-xl text-xs sm:text-sm transition-all border border-gray-600/50 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-floppy-disk text-hbOrange"></i> Save
+                    </button>
+
+                    <button type="button" onclick="exportToCSV()" class="flex-1 sm:flex-initial px-4 py-2.5 bg-hbCharcoal hover:bg-gray-600 text-white font-bold rounded-xl text-xs sm:text-sm transition-all border border-gray-600/50 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-file-csv text-emerald-400"></i> CSV
+                    </button>
+
+                    <button type="button" onclick="generatePDF()" class="flex-1 sm:flex-initial px-4 py-2.5 bg-gradient-to-r from-hbOrange to-hbOrangeHover hover:opacity-95 text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-hbOrange/20 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-file-pdf"></i> PDF
+                    </button>
+
+                    <button type="button" onclick="sendViaNativeMail()" class="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-paper-plane"></i> Send Email
+                    </button>
+                </div>
+            </div>
+        </form>
+    </main>
+
+    <!-- SAVED ORDERS DRAWER -->
+    <div id="saved-drawer" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden transition-opacity">
+        <div class="fixed right-0 top-0 bottom-0 w-full max-w-md bg-hbDark border-l border-hbCharcoal p-6 shadow-2xl flex flex-col justify-between overflow-y-auto">
+            <div>
+                <div class="flex items-center justify-between pb-4 border-b border-hbCharcoal mb-4">
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-box-archive text-hbOrange"></i> Saved Orders History
+                    </h3>
+                    <button onclick="toggleSavedDrawer()" class="text-gray-400 hover:text-white p-2">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+
+                <div id="saved-orders-list" class="space-y-3">
+                    <!-- Saved items rendered dynamically -->
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-hbCharcoal text-center">
+                <p class="text-xs text-gray-500">HalBrant Service Parts - 100% Free Offline Storage</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application State
+        let currentOrderId = null;
+        let elevatorStatus = 'RUNNING';
+        let photos = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initDates();
+            initSignaturePads();
+            addPartRow();
+            loadSavedOrdersCount();
+            checkNetworkStatus();
+
+            window.addEventListener('online', checkNetworkStatus);
+            window.addEventListener('offline', checkNetworkStatus);
+        });
+
+        function initDates() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('order-date').value = today;
+            currentOrderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
+            document.getElementById('form-id-display').innerText = 'ID: #' + currentOrderId;
+        }
+
+        function setElevatorStatus(status) {
+            elevatorStatus = status;
+            const badge = document.getElementById('status-indicator-badge');
+            const btnRunning = document.getElementById('status-btn-running');
+            const btnDown = document.getElementById('status-btn-down');
+
+            if (status === 'RUNNING') {
+                badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5";
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span> RUNNING';
+
+                btnRunning.className = "py-3 px-4 rounded-xl border-2 border-emerald-500 bg-emerald-500/10 text-emerald-400 font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all shadow-lg";
+                btnDown.className = "py-3 px-4 rounded-xl border-2 border-hbCharcoal bg-hbBlack text-gray-400 font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all";
+            } else {
+                badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-1.5 animate-pulse";
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400"></span> DOWN / OUT OF SERVICE';
+
+                btnRunning.className = "py-3 px-4 rounded-xl border-2 border-hbCharcoal bg-hbBlack text-gray-400 font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all";
+                btnDown.className = "py-3 px-4 rounded-xl border-2 border-red-500 bg-red-500/10 text-red-400 font-bold text-sm sm:text-base flex items-center justify-center gap-2 transition-all shadow-lg";
+            }
+        }
+
+        function checkNetworkStatus() {
+            const badge = document.getElementById('network-status');
+            if (navigator.onLine) {
+                badge.className = "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                badge.innerHTML = '<span class="w-1.5 h-1.5 mr-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Online';
+            } else {
+                badge.className = "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20";
+                badge.innerHTML = '<span class="w-1.5 h-1.5 mr-1.5 rounded-full bg-amber-400"></span> Offline Mode';
+            }
+        }
+
+        // DYNAMIC PARTS LIST LOGIC
+        let partCounter = 0;
+        function addPartRow(data = null) {
+            partCounter++;
+            const container = document.getElementById('parts-container');
+            const card = document.createElement('div');
+            card.className = "part-card bg-hbBlack p-4 rounded-xl border border-hbCharcoal relative space-y-3 transition-all";
+            card.id = `part-card-${partCounter}`;
+
+            card.innerHTML = `
+                <div class="flex justify-between items-center border-b border-hbCharcoal/50 pb-2">
+                    <span class="text-xs font-bold text-hbOrange uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-wrench"></i> Part #${container.children.length + 1}
+                    </span>
+                    ${container.children.length > 0 ? `
+                        <button type="button" onclick="removePartRow('part-card-${partCounter}')" class="text-gray-500 hover:text-red-400 text-xs">
+                            <i class="fa-solid fa-trash-can"></i> Remove
+                        </button>
+                    ` : ''}
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div class="sm:col-span-2">
+                        <label class="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Part Name / Description *</label>
+                        <input type="text" class="part-name w-full bg-hbDark border border-hbCharcoal rounded-lg px-3 py-1.5 text-xs text-white focus:border-hbOrange" placeholder="e.g. Hydraulic Pump Seal Kit" value="${data ? data.name : ''}" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Quantity *</label>
+                        <input type="number" min="1" class="part-qty w-full bg-hbDark border border-hbCharcoal rounded-lg px-3 py-1.5 text-xs text-white focus:border-hbOrange" value="${data ? data.qty : '1'}" required>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Manufacturer / Brand</label>
+                        <input type="text" class="part-mfr w-full bg-hbDark border border-hbCharcoal rounded-lg px-3 py-1.5 text-xs text-white focus:border-hbOrange" placeholder="e.g. Bosch / OEM" value="${data ? data.mfr : ''}">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Part / Catalog #</label>
+                        <input type="text" class="part-number w-full bg-hbDark border border-hbCharcoal rounded-lg px-3 py-1.5 text-xs text-white focus:border-hbOrange" placeholder="e.g. PN-77341-A" value="${data ? data.partNum : ''}">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Dimensions / Specs</label>
+                        <input type="text" class="part-specs w-full bg-hbDark border border-hbCharcoal rounded-lg px-3 py-1.5 text-xs text-white focus:border-hbOrange" placeholder="e.g. 24V, 3/4 inch bore" value="${data ? data.specs : ''}">
+                    </div>
+
+                    <div class="sm:col-span-2 lg:col-span-3">
+                        <label class="block text-[10px] font-semibold uppercase text-gray-400 mb-1">Reason for Order / Notes</label>
+                        <input type="text" class="part-reason w-full bg-hbDark border border-hbCharcoal rounded-lg px-3 py-1.5 text-xs text-white focus:border-hbOrange" placeholder="e.g. Worn seals causing fluid leak" value="${data ? data.reason : ''}">
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+            reindexParts();
+        }
+
+        function removePartRow(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.remove();
+                reindexParts();
+            }
+        }
+
+        function reindexParts() {
+            document.querySelectorAll('.part-card').forEach((card, idx) => {
+                const header = card.querySelector('.flex span');
+                if (header) header.innerHTML = `<i class="fa-solid fa-wrench"></i> Part #${idx + 1}`;
+            });
+        }
+
+        // PHOTO ATTACHMENT
+        function handlePhotoSelect(e) {
+            const files = e.target.files;
+            if (!files) return;
+
+            for (let file of files) {
+                if (photos.length >= 4) {
+                    alert("Maximum 4 photos allowed per order.");
+                    break;
+                }
+                const reader = new FileReader();
+                reader.onload = function (event) {
+                    photos.push(event.target.result);
+                    renderPhotoPreviews();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function renderPhotoPreviews() {
+            const grid = document.getElementById('photo-preview-grid');
+            grid.innerHTML = '';
+            document.getElementById('photo-count').innerText = `${photos.length} attached`;
+
+            photos.forEach((imgSrc, index) => {
+                const div = document.createElement('div');
+                div.className = "relative group rounded-lg overflow-hidden border border-hbCharcoal aspect-square bg-hbBlack";
+                div.innerHTML = `
+                    <img src="${imgSrc}" class="w-full h-full object-cover">
+                    <button type="button" onclick="removePhoto(${index})" class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 text-[10px] hover:bg-red-700 transition-all">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                `;
+                grid.appendChild(div);
+            });
+        }
+
+        function removePhoto(index) {
+            photos.splice(index, 1);
+            renderPhotoPreviews();
+        }
+
+        // SIGNATURE CANVAS SETUP
+        function initSignaturePads() {
+            setupCanvas('tech-sig-canvas');
+            setupCanvas('customer-sig-canvas');
+        }
+
+        function setupCanvas(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            let drawing = false;
+
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+
+            ctx.strokeStyle = '#f97316';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+
+            function getPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return { x: clientX - rect.left, y: clientY - rect.top };
+            }
+
+            canvas.addEventListener('mousedown', (e) => { drawing = true; ctx.beginPath(); const pos = getPos(e); ctx.moveTo(pos.x, pos.y); });
+            canvas.addEventListener('mousemove', (e) => { if (!drawing) return; const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); });
+            canvas.addEventListener('mouseup', () => drawing = false);
+
+            canvas.addEventListener('touchstart', (e) => { drawing = true; ctx.beginPath(); const pos = getPos(e); ctx.moveTo(pos.x, pos.y); e.preventDefault(); });
+            canvas.addEventListener('touchmove', (e) => { if (!drawing) return; const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); e.preventDefault(); });
+            canvas.addEventListener('touchend', () => drawing = false);
+        }
+
+        function clearSignature(type) {
+            const canvas = document.getElementById(`${type}-sig-canvas`);
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // GET FORM DATA OBJECT
+        function getFormData() {
+            const parts = [];
+            document.querySelectorAll('.part-card').forEach(card => {
+                parts.push({
+                    name: card.querySelector('.part-name').value,
+                    qty: card.querySelector('.part-qty').value,
+                    mfr: card.querySelector('.part-mfr').value,
+                    partNum: card.querySelector('.part-number').value,
+                    specs: card.querySelector('.part-specs').value,
+                    reason: card.querySelector('.part-reason').value,
+                });
+            });
+
+            return {
+                id: currentOrderId,
+                elevatorStatus: elevatorStatus,
+                siteName: document.getElementById('site-name').value,
+                workOrder: document.getElementById('work-order').value,
+                orderDate: document.getElementById('order-date').value,
+                siteAddress: document.getElementById('site-address').value,
+                techName: document.getElementById('tech-name').value,
+                contactPhone: document.getElementById('contact-phone').value,
+                priority: document.querySelector('input[name="priority"]:checked')?.value || 'Normal',
+                parts: parts,
+                quoteDate: document.getElementById('quote-date').value,
+                quoteAmount: document.getElementById('quote-amount').value,
+                quoteStatus: document.getElementById('quote-status').value,
+                orderStatus: document.getElementById('order-status').value,
+                photos: photos,
+                timestamp: new Date().toISOString()
+            };
+        }
+
+        // LOCAL STORAGE & DRAWER LOGIC
+        function saveOrderToLocal() {
+            const data = getFormData();
+            if (!data.siteName || !data.workOrder) {
+                alert("Please fill in required fields: Site Name & Work Order #");
+                return;
+            }
+
+            let saved = JSON.parse(localStorage.getItem('halbrant_orders') || '[]');
+            const idx = saved.findIndex(o => o.id === data.id);
+            if (idx >= 0) saved[idx] = data; else saved.push(data);
+
+            localStorage.setItem('halbrant_orders', JSON.stringify(saved));
+            loadSavedOrdersCount();
+            alert("Order saved locally to device storage!");
+        }
+
+        function loadSavedOrdersCount() {
+            const saved = JSON.parse(localStorage.getItem('halbrant_orders') || '[]');
+            document.getElementById('saved-count-badge').innerText = saved.length;
+        }
+
+        function toggleSavedDrawer() {
+            const drawer = document.getElementById('saved-drawer');
+            drawer.classList.toggle('hidden');
+            if (!drawer.classList.contains('hidden')) renderSavedOrdersList();
+        }
+
+        function renderSavedOrdersList() {
+            const container = document.getElementById('saved-orders-list');
+            const saved = JSON.parse(localStorage.getItem('halbrant_orders') || '[]');
+
+            if (saved.length === 0) {
+                container.innerHTML = `<p class="text-xs text-gray-500 text-center py-6">No saved orders found.</p>`;
+                return;
+            }
+
+            container.innerHTML = saved.map(order => `
+                <div class="bg-hbBlack p-3 rounded-xl border border-hbCharcoal flex items-center justify-between">
+                    <div>
+                        <h4 class="text-xs font-bold text-white">${order.siteName || 'Untitled Order'}</h4>
+                        <p class="text-[10px] text-gray-400">WO: ${order.workOrder} | Status: <span class="${order.elevatorStatus === 'RUNNING' ? 'text-emerald-400' : 'text-red-400'} font-bold">${order.elevatorStatus}</span></p>
+                        <span class="inline-block mt-1 text-[9px] px-2 py-0.5 rounded bg-hbOrange/20 text-hbOrange font-bold">${order.priority} Priority</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="loadOrder('${order.id}')" class="p-1.5 bg-hbDark hover:bg-gray-700 text-hbOrange rounded">
+                            <i class="fa-solid fa-folder-open text-xs"></i>
+                        </button>
+                        <button onclick="deleteOrder('${order.id}')" class="p-1.5 bg-hbDark hover:bg-red-900 text-red-400 rounded">
+                            <i class="fa-solid fa-trash text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadOrder(id) {
+            const saved = JSON.parse(localStorage.getItem('halbrant_orders') || '[]');
+            const order = saved.find(o => o.id === id);
+            if (!order) return;
+
+            currentOrderId = order.id;
+            document.getElementById('form-id-display').innerText = 'ID: #' + order.id;
+            setElevatorStatus(order.elevatorStatus || 'RUNNING');
+            document.getElementById('site-name').value = order.siteName || '';
+            document.getElementById('work-order').value = order.workOrder || '';
+            document.getElementById('order-date').value = order.orderDate || '';
+            document.getElementById('site-address').value = order.siteAddress || '';
+            document.getElementById('tech-name').value = order.techName || '';
+            document.getElementById('contact-phone').value = order.contactPhone || '';
+
+            const pRadio = document.querySelector(`input[name="priority"][value="${order.priority}"]`);
+            if (pRadio) pRadio.checked = true;
+
+            document.getElementById('parts-container').innerHTML = '';
+            if (order.parts && order.parts.length > 0) {
+                order.parts.forEach(p => addPartRow(p));
+            } else {
+                addPartRow();
+            }
+
+            document.getElementById('quote-date').value = order.quoteDate || '';
+            document.getElementById('quote-amount').value = order.quoteAmount || '';
+            document.getElementById('quote-status').value = order.quoteStatus || 'Pending';
+            document.getElementById('order-status').value = order.orderStatus || 'Draft';
+
+            photos = order.photos || [];
+            renderPhotoPreviews();
+            toggleSavedDrawer();
+        }
+
+        function deleteOrder(id) {
+            if (!confirm("Delete this order from local storage?")) return;
+            let saved = JSON.parse(localStorage.getItem('halbrant_orders') || '[]');
+            saved = saved.filter(o => o.id !== id);
+            localStorage.setItem('halbrant_orders', JSON.stringify(saved));
+            renderSavedOrdersList();
+            loadSavedOrdersCount();
+        }
+
+        function resetForm() {
+            if (confirm("Clear form for a new parts order?")) {
+                document.getElementById('parts-order-form').reset();
+                document.getElementById('parts-container').innerHTML = '';
+                photos = [];
+                renderPhotoPreviews();
+                clearSignature('tech');
+                clearSignature('customer');
+                setElevatorStatus('RUNNING');
+                initDates();
+                addPartRow();
+            }
+        }
+
+        // 100% FREE CLIENT-SIDE PDF EXPORT
+        function generatePDF() {
+            const data = getFormData();
+            if (!data.siteName || !data.workOrder) {
+                alert("Please fill in Site Name and Work Order # before exporting.");
+                return;
+            }
+
+            const element = document.createElement('div');
+            element.className = "p-8 bg-white text-black font-sans";
+            element.style.width = "800px";
+
+            element.innerHTML = `
+                <div style="border-bottom: 2px solid #f97316; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1 style="font-size: 24px; font-weight: 800; color: #111827; margin: 0;">HalBrant Service Parts</h1>
+                        <p style="font-size: 12px; color: #4b5563; margin: 2px 0 0 0;">Parts Requisition & Elevator Status Order</p>
+                    </div>
+                    <div style="text-align: right;">
+                        <p style="font-size: 14px; font-weight: bold; color: #f97316; margin: 0;">#${data.id}</p>
+                        <p style="font-size: 11px; color: #6b7280; margin: 0;">Date: ${data.orderDate}</p>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px; padding: 8px 12px; border-radius: 6px; font-weight: bold; font-size: 12px; display: inline-block; background-color: ${data.elevatorStatus === 'RUNNING' ? '#dcfce7' : '#fee2e2'}; color: ${data.elevatorStatus === 'RUNNING' ? '#166534' : '#991b1b'};">
+                    ELEVATOR STATUS: ${data.elevatorStatus}
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 20px; font-size: 12px;">
+                    <div><strong>Customer / Site:</strong> ${data.siteName}</div>
+                    <div><strong>Work Order #:</strong> ${data.workOrder}</div>
+                    <div><strong>Technician:</strong> ${data.techName}</div>
+                    <div><strong>Priority:</strong> <span style="color: #f97316; font-weight: bold;">${data.priority}</span></div>
+                    <div><strong>Address:</strong> ${data.siteAddress || 'N/A'}</div>
+                    <div><strong>Contact Phone:</strong> ${data.contactPhone || 'N/A'}</div>
+                </div>
+
+                <h3 style="font-size: 14px; font-weight: bold; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin-bottom: 10px;">Parts Requested</h3>
+                <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 20px;">
+                    <thead>
+                        <tr style="background: #111827; color: white; text-align: left;">
+                            <th style="padding: 6px;">#</th>
+                            <th style="padding: 6px;">Part Name / Description</th>
+                            <th style="padding: 6px;">Qty</th>
+                            <th style="padding: 6px;">Part #</th>
+                            <th style="padding: 6px;">Mfr</th>
+                            <th style="padding: 6px;">Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.parts.map((p, i) => `
+                            <tr style="border-bottom: 1px solid #e5e7eb;">
+                                <td style="padding: 6px;">${i + 1}</td>
+                                <td style="padding: 6px;"><strong>${p.name}</strong><br><span style="font-size: 9px; color: #6b7280;">${p.specs || ''}</span></td>
+                                <td style="padding: 6px;">${p.qty}</td>
+                                <td style="padding: 6px;">${p.partNum || '-'}</td>
+                                <td style="padding: 6px;">${p.mfr || '-'}</td>
+                                <td style="padding: 6px;">${p.reason || '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; font-size: 12px; background: #fff7ed; padding: 10px; border-radius: 8px;">
+                    <div><strong>Quote Status:</strong> ${data.quoteStatus}</div>
+                    <div><strong>Estimated Total:</strong> $${data.quoteAmount || '0.00'}</div>
+                    <div><strong>Order Fulfillment:</strong> ${data.orderStatus}</div>
+                    <div><strong>Quote Date:</strong> ${data.quoteDate || 'N/A'}</div>
+                </div>
+            `;
+
+            const opt = {
+                margin:       0.4,
+                filename:     `HalBrant_Parts_${data.workOrder}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save();
+        }
+
+        // CSV EXPORT LOGIC
+        function exportToCSV() {
+            const data = getFormData();
+            if (!data.siteName) {
+                alert("Please enter a Site Name before exporting CSV.");
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Order ID,Elevator Status,Site Name,Work Order,Date,Tech,Priority,Part Name,Qty,Mfr,Part Number,Specs,Quote Status,Amount\n";
+
+            data.parts.forEach(p => {
+                const row = [
+                    data.id,
+                    data.elevatorStatus,
+                    `"${data.siteName}"`,
+                    `"${data.workOrder}"`,
+                    data.orderDate,
+                    `"${data.techName}"`,
+                    data.priority,
+                    `"${p.name}"`,
+                    p.qty,
+                    `"${p.mfr}"`,
+                    `"${p.partNum}"`,
+                    `"${p.specs}"`,
+                    data.quoteStatus,
+                    data.quoteAmount
+                ].join(",");
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `HalBrant_PartsOrder_${data.workOrder || 'Export'}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // 100% FREE NATIVE MAILTO DISPATCH (NO EMAILJS CREDITS NEEDED)
+        function sendViaNativeMail() {
+            const data = getFormData();
+            if (!data.siteName || !data.workOrder) {
+                alert("Please fill in Site Name and Work Order # before sending email.");
+                return;
+            }
+
+            const subject = encodeURIComponent(`[HalBrant Parts Order] ${data.siteName} - WO #${data.workOrder} (${data.elevatorStatus})`);
+            
+            let bodyText = `HALBRANT SERVICE PARTS ORDER SUMMARY\n`;
+            bodyText += `====================================\n\n`;
+            bodyText += `Order ID: #${data.id}\n`;
+            bodyText += `Elevator Status: ${data.elevatorStatus}\n`;
+            bodyText += `Customer / Site: ${data.siteName}\n`;
+            bodyText += `Work Order #: ${data.workOrder}\n`;
+            bodyText += `Date: ${data.orderDate}\n`;
+            bodyText += `Technician: ${data.techName} (${data.contactPhone || 'No phone'})\n`;
+            bodyText += `Priority: ${data.priority}\n\n`;
+
+            bodyText += `PARTS REQUESTED:\n`;
+            bodyText += `------------------------------------\n`;
+            data.parts.forEach((p, idx) => {
+                bodyText += `${idx + 1}. ${p.name} (Qty: ${p.qty})\n`;
+                if (p.partNum) bodyText += `   Part #: ${p.partNum}\n`;
+                if (p.mfr) bodyText += `   Mfr: ${p.mfr}\n`;
+                if (p.specs) bodyText += `   Specs: ${p.specs}\n`;
+                if (p.reason) bodyText += `   Reason: ${p.reason}\n`;
+                bodyText += `\n`;
+            });
+
+            bodyText += `FULFILLMENT & QUOTE INFO:\n`;
+            bodyText += `------------------------------------\n`;
+            bodyText += `Quote Status: ${data.quoteStatus}\n`;
+            bodyText += `Estimated Total: $${data.quoteAmount || '0.00'}\n`;
+            bodyText += `Fulfillment Status: ${data.orderStatus}\n\n`;
+            bodyText += `Sent via HalBrant Mobile Service Parts Portal.`;
+
+            const mailtoUrl = `mailto:?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
+            window.location.href = mailtoUrl;
+        }
+    </script>
+</body>
+</html>
